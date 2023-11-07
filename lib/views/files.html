@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="FMApp">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>File Manager</title>
+  <!-- 
+  <link href="//cdn.bootcss.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet">
+  <script src="//cdn.bootcss.com/jquery/2.1.4/jquery.min.js"></script>
+  <script src="//cdn.bootcss.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+  <script src="//cdn.bootcss.com/angular.js/1.4.5/angular.min.js"></script>
+  <script src="js/angular-file.js"></script>
+  <script src="js/app.js"></script> 
+-->
+
+  <link href="js/bootstrap.min.css" rel="stylesheet">
+  <script src="js/jquery.min.js"></script>
+  <script src="js/bootstrap.min.js"></script>
+  <script src="js/angular.min.js"></script>
+
+  <script src="js/angular-file.js"></script>
+  <script src="js/app.js"></script>
+
+  <style type="text/css">
+    .sortable {
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body ng-controller="FileManagerCtr as FM">
+  <div class="modal fade" id="createFolderModal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4>Nueva Carpeta</h4>
+        </div>
+        <div class="modal-body">
+          <p>Ruta de Carpeta　{{FM.curFolderPath + FM.newFolderName + '/'}}</p>
+          <label class="control-label">Nombre de Carpeta</label><input class="form-control" autofocus
+            ng-model="FM.newFolderName" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" data-dismiss="modal" ng-disabled="!FM.newFolderName"
+            ng-click="FM.createFolder(FM.newFolderName)">Agregar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="uploadFileModal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4>Subir Archivos</h4>
+        </div>
+        <div class="modal-body">
+          <p>Subir a {{FM.curFolderPath + FM.uploadFile.name}}</p>
+          <div class="form-inline">
+            <input type="file" class="form-control" autofocus ng-model="FM.uploadFile">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" data-dismiss="modal" ng-disabled="!FM.uploadFile"
+            ng-click="FM.upload()">Agregar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="renameModal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4>Renombrar</h4>
+        </div>
+        <div class="modal-body">
+          <label class="control-label">Nuevo Nombre</label><input class="form-control" autofocus ng-model="FM.newName"
+            placeholder={{FM.selection[0].name}} />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" data-dismiss="modal" ng-disabled="!FM.newName"
+            ng-click="FM.rename(FM.newName)">Agregar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="moveModal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4>Mover</h4>
+        </div>
+        <div class="modal-body">
+          <label class="control-label">Ruta Nueva</label><input class="form-control" autofocus ng-model="FM.moveTarget"
+            placeholder="{{FM.curFolderPath}}" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" data-dismiss="modal" ng-disabled="!FM.moveTarget"
+            ng-click="FM.move(FM.moveTarget)">Mover</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="archiveModal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4>Crear Archivo</h4>
+        </div>
+        <div class="modal-body">
+          <label class="control-label">Nombre</label><input class="form-control" autofocus ng-model="FM.archiveTarget"
+            placeholder="Enter name of archive" />
+          <div class="checkbox">
+            <label><input type="checkbox" ng-init="FM.archiveEmbedDirs = true" ng-model="FM.archiveEmbedDirs">Incrustar
+              directorios en el archivo</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" data-dismiss="modal" ng-disabled="!FM.archiveTarget"
+            ng-click="FM.archive(FM.archiveTarget)">Crear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="container">
+    <div class="btn-toolbar">
+      <button type="button" class="btn btn-default" ng-disabled="FM.btnDisabled('download')"
+        ng-click="FM.download()"><span class="glyphicon glyphicon-download"></span> Descargar</button>
+      <button type="button" class="btn btn-default" ng-disabled="FM.btnDisabled('delete')" ng-click="FM.delete()"><span
+          class="glyphicon glyphicon-remove"></span> Eliminar</button>
+      <button type="button" class="btn btn-default" ng-disabled="FM.btnDisabled('move')" data-toggle="modal"
+        data-target="#moveModal"><span class="glyphicon glyphicon-random"></span> Mover</button>
+      <button type="button" class="btn btn-default" ng-disabled="FM.btnDisabled('rename')" data-toggle="modal"
+        data-target="#renameModal"><span class="glyphicon glyphicon-font"></span> Renombrar</button>
+      <button type="button" class="btn btn-default" ng-disabled="FM.btnDisabled('archive')" data-toggle="modal"
+        data-target="#archiveModal" ng-click="FM.updateArchiveName()"><span
+          class="glyphicon glyphicon-download-alt"></span> Archivar</button>
+      <button type="button" class="btn btn-default pull-right" ng-disabled="FM.btnDisabled('create_folder')"
+        data-toggle="modal" data-target="#createFolderModal"><span class="glyphicon glyphicon-plus-sign"></span> Nueva
+        Carpeta</button>
+      <button type="button" class="btn btn-default pull-right" ng-disabled="FM.btnDisabled('upload_file')"
+        data-toggle="modal" data-target="#uploadFileModal"><span class="glyphicon glyphicon-upload"></span>
+        Subir</button>
+    </div>
+
+    <ol class="breadcrumb">
+      <span class="glyphicon glyphicon-home"></span>
+      <li ng-repeat="p in FM.curBreadCrumbPaths"><a href={{p.path}}>{{p.name}}</a></li>
+    </ol>
+
+    <table class="table table-hover table-striped">
+      <thead>
+        <tr class="sortable">
+          <th><input type="checkbox" value="" ng-model="FM.selectAll"></th>
+          <th>Tipo</th>
+          <th>Nombre</th>
+          <th>Tamaño</th>
+          <th>Creado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="sortable" ng-repeat="file in FM.curFiles | orderBy:'folder'">
+          <td><input type="checkbox" value="{{file.name}}" ng-model="file.selected"></td>
+          <td ng-click="FM.clickFile(file)"><span
+              class="{{file.folder ? 'glyphicon glyphicon-folder-open' : 'glyphicon glyphicon-file'}}"></span></td>
+          <td ng-click="FM.clickFile(file)"><a>{{file.name}}</a></td>
+          <td>{{file.humanSize}}</td>
+          <td>{{file.humanTime}}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div id="successAlert" class="alert alert-success" role="alert" style="display: none">
+      <span>{{FM.successData}}</span>
+    </div>
+
+    <div id="errorAlert" class="alert alert-danger" role="alert" style="display: none">
+      <button type="button" class="close" data-dismiss="alert" alert-label="Close">
+        <span aria-hidden="true">&times</span>
+      </button>
+      <strong>Error!</strong>
+      {{FM.errorData}}
+    </div>
+
+  </div>
+
+</body>
+
+</html>
